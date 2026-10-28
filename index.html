@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0a0f1d" />
+  <title>Ziki — Agent decisions</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page:#0a0f1d; --surface:#111c30; --surface2:#16243a; --surface3:#0d1728;
+      --line:#263954; --line-soft:#1b2b43; --text:#f4f7ff; --muted:#94a3b8;
+      --blue:#3478f6; --blue-soft:#182f52; --green:#24d18a; --green-soft:#123627;
+      --amber:#f3b83f; --amber-soft:#362b14; --red:#ff7584; --red-soft:#3d202b;
+      --purple:#ba9cff; --purple-soft:#292342; --radius:18px;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; background:radial-gradient(ellipse at 50% -25%,#172846 0,transparent 53%),var(--page); color:var(--text); }
+    button,input,textarea { font:inherit; }
+    button { color:inherit; }
+    button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible { outline:2px solid #8cc8ff; outline-offset:3px; }
+    .topbar { height:68px; border-bottom:1px solid var(--line-soft); background:rgba(10,15,29,.9); }
+    .nav-inner { max-width:1400px; height:100%; margin:auto; padding:0 32px; display:flex; align-items:center; gap:28px; }
+    .brand { display:flex; align-items:center; gap:9px; color:var(--text); text-decoration:none; font-weight:780; font-size:17px; letter-spacing:-.04em; }
+    .brand-mark { width:26px; height:26px; display:grid; place-items:center; border-radius:8px; color:#fff; background:linear-gradient(145deg,#65baff,#3478f6 70%); font-weight:850; font-size:15px; box-shadow:0 5px 15px #3478f633; }
+    .workspace-chip { display:flex; align-items:center; gap:8px; padding-left:19px; border-left:1px solid var(--line); color:#d7e1f0; font-size:13px; font-weight:650; }
+    .workspace-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 4px #24d18a18; }
+    .nav-links { display:flex; align-items:center; gap:5px; flex:1; }
+    .nav-link { border:0; border-radius:10px; background:transparent; padding:9px 12px; color:#a5b3c8; font-size:13px; font-weight:600; cursor:pointer; }
+    .nav-link.active,.nav-link:hover { color:var(--text); background:#ffffff0b; }
+    .nav-link.active { box-shadow:inset 0 -2px var(--blue); border-radius:10px 10px 3px 3px; }
+    .nav-actions { display:flex; align-items:center; gap:11px; }
+    .points-badge { display:flex; align-items:center; gap:7px; padding:8px 12px; border:1px solid #624915; border-radius:999px; background:#32270f; color:#ffd367; font-size:12px; font-weight:750; white-space:nowrap; }
+    .avatar { width:32px; height:32px; display:grid; place-items:center; border:1px solid #42526b; border-radius:50%; background:radial-gradient(circle at 35% 30%,#b7835f,#293c57 63%,#18263a); font-size:10px; font-weight:800; }
+    .profile { display:flex; align-items:center; gap:8px; color:#dce6f7; font-size:12px; font-weight:650; }
+    main { max-width:1370px; margin:auto; padding:34px 32px 54px; }
+    .intro { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:23px; }
+    .eyebrow { margin-bottom:9px; color:#7bbaff; font-size:10px; font-weight:780; letter-spacing:.13em; text-transform:uppercase; }
+    h1 { margin:0; font-size:clamp(27px,3vw,36px); line-height:1.1; letter-spacing:-.045em; }
+    .intro-copy { max-width:630px; margin:9px 0 0; color:#a5b3c8; font-size:14px; line-height:1.55; }
+    .header-actions { display:flex; align-items:center; gap:10px; }
+    .subtle-btn,.primary-btn,.text-btn,.tab-button,.filter-button { cursor:pointer; transition:background .16s,border-color .16s,transform .16s,color .16s; }
+    .subtle-btn { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:0 13px; border:1px solid var(--line); border-radius:11px; background:#111c30b8; color:#c4d0e0; font-size:12px; font-weight:650; }
+    .subtle-btn:hover { border-color:#496283; background:var(--surface2); }
+    .primary-btn { min-height:42px; padding:0 16px; border:1px solid #5c96ff; border-radius:12px; background:linear-gradient(135deg,#4b8cff,#2e6de5); color:white; font-size:12px; font-weight:750; box-shadow:0 7px 18px #1f69ee24; }
+    .primary-btn:hover { transform:translateY(-1px); filter:brightness(1.08); }
+    .summary-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:11px; margin-bottom:20px; }
+    .summary-item { display:flex; align-items:center; gap:12px; min-height:66px; padding:12px 15px; border:1px solid var(--line-soft); border-radius:14px; background:linear-gradient(130deg,#111c30f2,#0f192aee); }
+    .summary-icon { width:34px; height:34px; flex:none; display:grid; place-items:center; border:1px solid #2c4567; border-radius:11px; color:#91c5ff; background:#152744; }
+    .summary-value { font-size:18px; line-height:1.1; font-weight:760; letter-spacing:-.03em; }
+    .summary-label { margin-top:3px; color:var(--muted); font-size:11px; }
+    .layout { display:grid; grid-template-columns:minmax(0,1fr) 306px; align-items:start; gap:18px; }
+    .main-panel,.side-card { border:1px solid var(--line); border-radius:var(--radius); background:linear-gradient(150deg,#111c30f7,#0f192cf7); box-shadow:0 16px 44px #00000012; }
+    .main-panel { overflow:hidden; }
+    .panel-top { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:17px 19px 0; }
+    .view-tabs { display:flex; align-items:center; gap:4px; padding:4px; border:1px solid var(--line-soft); border-radius:12px; background:#0a1424; }
+    .tab-button { display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 12px; border:0; border-radius:9px; background:transparent; color:#96a7bf; font-size:12px; font-weight:650; }
+    .tab-button[aria-selected="true"] { background:#1c3150; color:#f4f7ff; box-shadow:0 1px 5px #0005; }
+    .tab-count { display:grid; min-width:18px; height:18px; place-items:center; padding:0 5px; border-radius:999px; background:#2b4467; color:#b6d8ff; font-size:10px; font-weight:760; }
+    .panel-tools { display:flex; align-items:center; gap:8px; }
+    .sort-select,.search-input { min-height:34px; border:1px solid var(--line); border-radius:10px; background:#0b1526; color:#c8d4e5; font-size:11px; }
+    .sort-select { padding:0 10px; }
+    .queue-intro { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:18px 20px 14px; }
+    .queue-title { margin:0; font-size:18px; letter-spacing:-.025em; }
+    .queue-caption { margin:5px 0 0; color:var(--muted); font-size:12px; line-height:1.45; }
+    .queue-count { display:flex; flex:none; align-items:center; gap:7px; color:#ffc964; font-size:11px; font-weight:700; }
+    .queue-count .dot { width:7px; height:7px; border-radius:50%; background:var(--amber); box-shadow:0 0 0 4px #f3b83f18; }
+    .filter-row { display:flex; align-items:center; gap:7px; padding:0 20px 13px; border-bottom:1px solid var(--line-soft); }
+    .filter-button { min-height:29px; padding:0 10px; border:1px solid var(--line); border-radius:999px; background:transparent; color:#9cacc1; font-size:10px; font-weight:640; }
+    .filter-button:hover { border-color:#506987; color:white; }
+    .filter-button[aria-pressed="true"] { border-color:#367be5; background:#19335a; color:#b8d8ff; }
+    .decision-list { display:grid; gap:11px; padding:14px; }
+    .decision-card { position:relative; padding:16px 17px 14px; overflow:hidden; border:1px solid #2b405e; border-radius:15px; background:linear-gradient(115deg,#15243b,#111d31 68%); }
+    .decision-card::before { position:absolute; inset:0 auto 0 0; width:3px; background:var(--blue); content:""; }
+    .decision-card[data-type="scope"]::before { background:var(--purple); }
+    .decision-card.is-handled { opacity:.8; border-color:#29394f; }
+    .card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:13px; }
+    .agent-label { display:flex; align-items:center; gap:9px; min-width:0; color:#dce6f7; font-size:11px; font-weight:680; }
+    .agent-avatar { width:28px; height:28px; flex:none; display:grid; place-items:center; border:1px solid #345177; border-radius:9px; background:#172b49; color:#8cc5ff; font-size:10px; font-weight:780; }
+    .agent-meta { display:block; margin-top:2px; color:#899bb4; font-size:10px; font-weight:450; }
+    .kind-pill,.deadline-pill,.risk-pill,.status-pill { display:inline-flex; align-items:center; gap:6px; min-height:23px; padding:0 8px; border:1px solid transparent; border-radius:999px; font-size:10px; font-weight:700; white-space:nowrap; }
+    .kind-pill.offer { color:#9fcaff; border-color:#2b4c78; background:#172d4c; }
+    .kind-pill.scope { color:#d0baff; border-color:#4a3b78; background:#292342; }
+    .deadline-pill { color:#f4cb6b; border-color:#5d4a22; background:#332a17; }
+    .risk-pill { color:#ff9aa5; border-color:#603344; background:#3a202b; }
+    .card-body { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:20px; }
+    .card-title { margin:0; font-size:16px; line-height:1.3; letter-spacing:-.018em; }
+    .card-summary { max-width:650px; margin:6px 0 0; color:#a9b8cd; font-size:12px; line-height:1.55; }
+    .card-summary strong { color:#dbe7f8; font-weight:650; }
+    .decision-callout { display:flex; align-items:flex-start; gap:8px; margin-top:12px; color:#b3c3d8; font-size:10px; line-height:1.45; }
+    .decision-callout svg { flex:none; color:#82bcff; margin-top:1px; }
+    .card-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
+    .card-actions .primary-btn { min-height:37px; padding:0 12px; font-size:11px; }
+    .text-btn { min-height:34px; padding:0 8px; border:0; background:transparent; color:#a9cfff; font-size:11px; font-weight:650; }
+    .text-btn:hover { color:white; }
+    .details-toggle { display:inline-flex; align-items:center; gap:5px; margin-top:11px; padding:0; border:0; background:transparent; color:#8dbcf3; font-size:10px; font-weight:650; cursor:pointer; }
+    .details-toggle svg { transition:transform .18s; }
+    .details-toggle[aria-expanded="true"] svg { transform:rotate(180deg); }
+    .details-panel { margin-top:12px; padding:12px; border:1px solid #273b58; border-radius:11px; background:#0c1728; }
+    .card-resolution { margin-top:12px; padding:10px 11px; border:1px solid #245c42; border-radius:10px; background:#123627; color:#a6edc9; font-size:11px; line-height:1.5; }
+    .decision-card[data-state="declined"] .card-resolution { border-color:#5b4a25; background:#332a17; color:#f2d17f; }
+    .decision-card[data-state="revision"] .card-resolution { border-color:#3a4f72; background:#172941; color:#bed6f4; }
+    .details-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .detail-label { color:#8496af; font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
+    .detail-value { margin-top:4px; color:#d3dfef; font-size:11px; line-height:1.45; }
+    .diff-box { margin-top:10px; padding:9px 10px; border-radius:8px; background:#101d30; color:#a9c3df; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:10px; line-height:1.55; }
+    .diff-add { color:#79e0ae; }
+    .revision-form { display:flex; gap:8px; margin-top:12px; }
+    .revision-form textarea { flex:1; min-height:58px; resize:vertical; padding:9px 10px; border:1px solid var(--line); border-radius:10px; background:#0b1526; color:var(--text); font-size:11px; }
+    .revision-form .primary-btn { align-self:flex-end; min-height:34px; padding:0 11px; font-size:10px; }
+    .handled-label { display:flex; align-items:center; gap:7px; margin:0 5px 2px; color:#7588a1; font-size:10px; font-weight:680; text-transform:uppercase; letter-spacing:.08em; }
+    .handled-label::after { height:1px; flex:1; background:var(--line-soft); content:""; }
+    .empty-state { padding:42px 20px; text-align:center; color:var(--muted); }
+    .empty-icon { width:42px; height:42px; display:grid; place-items:center; margin:0 auto 12px; border:1px solid #2a4363; border-radius:14px; background:#152744; color:#8fc5ff; }
+    .empty-state h3 { margin:0; color:#e6eef9; font-size:15px; }
+    .empty-state p { margin:6px 0 0; font-size:11px; }
+    .activity-list { display:grid; gap:0; padding:4px 20px 18px; }
+    .activity-item { display:grid; grid-template-columns:35px minmax(0,1fr) auto; align-items:center; gap:10px; padding:14px 2px; border-bottom:1px solid var(--line-soft); }
+    .activity-item:last-child { border-bottom:0; }
+    .activity-state { width:28px; height:28px; display:grid; place-items:center; border-radius:9px; background:#162943; color:#8fc5ff; }
+    .activity-title { color:#e1e9f5; font-size:12px; font-weight:660; }
+    .activity-sub { margin-top:4px; color:#8799b0; font-size:10px; }
+    .status-pill.running { color:#76e1b2; background:#123627; border-color:#245c42; }
+    .status-pill.waiting { color:#d0baff; background:#292342; border-color:#4a3b78; }
+    .status-pill.done { color:#a9bbd1; background:#1a283a; border-color:#34445b; }
+    .activity-points { color:#73e1b1; font-size:10px; font-weight:700; white-space:nowrap; }
+    .side-column { display:grid; gap:13px; }
+    .side-card { padding:16px; }
+    .side-title-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .side-title { margin:0; font-size:13px; font-weight:720; }
+    .small-link { border:0; background:transparent; color:#8dbcf3; font-size:10px; font-weight:650; cursor:pointer; }
+    .guide-copy { margin:7px 0 14px; color:#93a4ba; font-size:10px; line-height:1.5; }
+    .guide-step { display:grid; grid-template-columns:25px minmax(0,1fr); gap:9px; padding:9px 0; border-top:1px solid var(--line-soft); }
+    .step-num { width:22px; height:22px; display:grid; place-items:center; border:1px solid #2c4566; border-radius:8px; color:#99c9ff; background:#14253f; font-size:10px; font-weight:750; }
+    .step-title { color:#dbe5f2; font-size:10px; font-weight:650; }
+    .step-copy { margin-top:3px; color:#8294ac; font-size:9px; line-height:1.45; }
+    .agent-list { display:grid; gap:0; margin-top:9px; }
+    .agent-row { display:flex; align-items:center; gap:9px; padding:10px 0; border-top:1px solid var(--line-soft); }
+    .agent-status-dot { width:7px; height:7px; flex:none; border-radius:50%; background:#72839b; }
+    .agent-status-dot.ready { background:var(--green); box-shadow:0 0 0 4px #24d18a18; }
+    .agent-status-dot.waiting { background:var(--purple); box-shadow:0 0 0 4px #ba9cff18; }
+    .agent-row-name { color:#dce6f3; font-size:10px; font-weight:640; }
+    .agent-row-state { margin-top:3px; color:#8496ad; font-size:9px; }
+    .agent-row:last-child { border:0; padding-bottom:0; }
+    .boundary-note { display:flex; gap:9px; padding:11px; border:1px solid #26496b; border-radius:11px; background:#132440; color:#a8c8ef; font-size:10px; line-height:1.5; }
+    .boundary-note svg { flex:none; margin-top:1px; }
+    .toast { position:fixed; left:50%; bottom:22px; z-index:20; max-width:calc(100vw - 32px); padding:12px 16px; transform:translate(-50%,14px); opacity:0; pointer-events:none; border:1px solid #355074; border-radius:12px; background:#152641; color:#e9f2ff; box-shadow:0 12px 35px #0008; font-size:12px; transition:opacity .2s,transform .2s; }
+    .toast.show { transform:translate(-50%,0); opacity:1; }
+    .decision-dialog { width:min(440px,calc(100vw - 28px)); padding:0; border:1px solid #3b5274; border-radius:18px; background:#111c30; color:var(--text); box-shadow:0 24px 90px #000b; }
+    .decision-dialog::backdrop { background:#040914c9; backdrop-filter:blur(4px); }
+    .dialog-inner { padding:22px; }
+    .dialog-kicker { color:#84bdff; font-size:10px; font-weight:760; letter-spacing:.1em; text-transform:uppercase; }
+    .dialog-title { margin:9px 0 7px; font-size:20px; letter-spacing:-.03em; }
+    .dialog-copy { margin:0; color:#a5b4c8; font-size:12px; line-height:1.55; }
+    .dialog-consequence { margin-top:13px; padding:11px 12px; border:1px solid var(--line); border-radius:10px; background:#0c1728; color:#d0dced; font-size:11px; line-height:1.5; }
+    .dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+    .dialog-actions .primary-btn { min-height:38px; }
+    [hidden] { display:none !important; }
+    @media (max-width:1050px) {
+      .nav-inner { gap:17px; padding-inline:22px; }
+      main { padding-inline:22px; }
+      .layout { grid-template-columns:minmax(0,1fr) 270px; gap:13px; }
+      .card-body { grid-template-columns:1fr; gap:12px; }
+      .card-actions { justify-content:flex-start; }
+      .profile-name { display:none; }
+    }
+    @media (max-width:760px) {
+      .topbar { height:60px; }
+      .nav-inner { padding:0 15px; gap:13px; }
+      .workspace-chip { padding-left:12px; font-size:11px; }
+      .nav-links { display:none; }
+      .nav-actions { margin-left:auto; gap:7px; }
+      .profile-name,.agents-nav { display:none; }
+      .points-badge { padding:7px 9px; font-size:10px; }
+      main { padding:24px 14px 36px; }
+      .intro { align-items:stretch; flex-direction:column; gap:14px; margin-bottom:17px; }
+      .intro-copy { font-size:12px; }
+      .header-actions { justify-content:space-between; }
+      .summary-row { gap:7px; margin-bottom:12px; }
+      .summary-item { align-items:flex-start; flex-direction:column; gap:7px; min-height:90px; padding:10px; }
+      .summary-icon { width:29px; height:29px; border-radius:9px; }
+      .summary-value { font-size:15px; }
+      .summary-label { font-size:9px; }
+      .layout { grid-template-columns:1fr; }
+      .side-column { grid-template-columns:1fr 1fr; }
+      .panel-top { align-items:flex-start; flex-direction:column; padding:13px 13px 0; }
+      .panel-tools { width:100%; justify-content:flex-end; }
+      .queue-intro { padding:15px 14px 12px; }
+      .filter-row { overflow-x:auto; padding:0 14px 12px; }
+      .filter-button { flex:none; }
+      .decision-list { padding:10px; }
+      .decision-card { padding:14px 13px 12px; }
+      .card-head { align-items:flex-start; }
+      .card-title { font-size:14px; }
+      .card-summary { font-size:11px; }
+      .card-actions { flex-wrap:wrap; }
+      .card-actions .primary-btn { flex:1; }
+      .details-grid { grid-template-columns:1fr 1fr; }
+      .activity-list { padding-inline:13px; }
+    }
+    @media (max-width:460px) {
+      .summary-row { grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .summary-item { min-height:83px; }
+      .summary-label { line-height:1.3; }
+      .side-column { grid-template-columns:1fr; }
+      .queue-intro { flex-direction:column; }
+      .queue-count { align-self:flex-start; }
+      .decision-card .deadline-pill { font-size:9px; }
+      .kind-pill,.risk-pill { font-size:9px; }
+      .card-head { gap:6px; }
+      .agent-label { font-size:10px; }
+      .revision-form { flex-direction:column; }
+      .revision-form .primary-btn { align-self:flex-start; }
+    }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="nav-inner">
+      <a class="brand" href="#top" aria-label="Ziki home"><span class="brand-mark" aria-hidden="true">Z</span><span>ziki</span></a>
+      <div class="workspace-chip"><span class="workspace-dot" aria-hidden="true"></span>Zedu <span aria-hidden="true">⌄</span></div>
+      <nav class="nav-links" aria-label="Workspace navigation">
+        <button class="nav-link active" type="button">Product</button><button class="nav-link" type="button">Marketing</button><button class="nav-link" type="button">Security</button>
+      </nav>
+      <div class="nav-actions"><div class="points-badge" aria-label="1,655 points earned"><span aria-hidden="true">✦</span>1,655 pts</div><div class="profile"><span class="avatar" aria-hidden="true">PA</span><span class="profile-name">Paul Ajibola</span></div></div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="intro" aria-labelledby="page-title">
+      <div><div class="eyebrow">Zedu workspace <span aria-hidden="true">/</span> Product</div><h1 id="page-title">Keep the work moving.</h1><p class="intro-copy">Your agents handle tasks and ideas. They’ll pause when they need your decision, and show you why before you act.</p></div>
+      <div class="header-actions"><button class="subtle-btn" id="resetDemo" type="button" title="Restore the sample decisions">↻ <span>Reset demo</span></button><button class="primary-btn" id="howItWorksTop" type="button">How it works <span aria-hidden="true">↓</span></button></div>
+    </section>
+
+    <section class="summary-row" aria-label="Workspace summary">
+      <article class="summary-item"><span class="summary-icon" aria-hidden="true">◷</span><div><div class="summary-value"><span id="pendingSummary">2</span> waiting</div><div class="summary-label">Decisions from your agents</div></div></article>
+      <article class="summary-item"><span class="summary-icon" aria-hidden="true">⌘</span><div><div class="summary-value">1 of 5 ready</div><div class="summary-label">Agents available to work</div></div></article>
+      <article class="summary-item"><span class="summary-icon" aria-hidden="true">✦</span><div><div class="summary-value">1,655 pts</div><div class="summary-label">Earned this week</div></div></article>
+    </section>
+
+    <div class="layout">
+      <section class="main-panel" aria-label="Agent decisions and work">
+        <div class="panel-top">
+          <div class="view-tabs" role="tablist" aria-label="Workspace view">
+            <button class="tab-button" id="decisionsTab" type="button" role="tab" aria-selected="true" aria-controls="decisionsPanel"><span>Needs you</span><span class="tab-count" id="pendingTabCount">2</span></button>
+            <button class="tab-button" id="activityTab" type="button" role="tab" aria-selected="false" aria-controls="activityPanel"><span>Work in motion</span></button>
+          </div>
+          <div class="panel-tools"><select class="sort-select" id="sortQueue" aria-label="Sort decisions"><option value="priority">Sort: recommended</option><option value="type">Sort: by request type</option></select></div>
+        </div>
+
+        <div id="decisionsPanel" role="tabpanel" aria-labelledby="decisionsTab">
+          <div class="queue-intro"><div><h2 class="queue-title">Decisions waiting on you</h2><p class="queue-caption">Review the request, its impact, and what happens next.</p></div><div class="queue-count"><span class="dot" aria-hidden="true"></span><span id="queueCountText">2 need a decision</span></div></div>
+          <div class="filter-row" role="group" aria-label="Filter decisions">
+            <button class="filter-button" type="button" data-filter="all" aria-pressed="true">All <span class="filter-count">2</span></button>
+            <button class="filter-button" type="button" data-filter="offer" aria-pressed="false">Task offers <span class="filter-count">1</span></button>
+            <button class="filter-button" type="button" data-filter="scope" aria-pressed="false">Scope changes <span class="filter-count">1</span></button>
+          </div>
+          <div class="decision-list" id="decisionList">
+            <article class="decision-card" id="card422" data-type="offer" data-priority="1" data-state="pending">
+              <div class="card-head"><div class="agent-label"><span class="agent-avatar" aria-hidden="true">N</span><span>Nova Solver<span class="agent-meta">Task offer · found for your workspace</span></span></div><div class="deadline-pill" title="The offer expires; it will not be accepted automatically.">Offer expires in 18 min</div></div>
+              <div class="card-body"><div><h3 class="card-title">Nova recommends accepting task #422</h3><p class="card-summary">The agent can take on a <strong>mobile navigation fix</strong> that matches its skills. Estimated effort: 25 minutes. The offer expires if you don’t respond; nothing is accepted automatically.</p><div class="decision-callout"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 7v4m0-6h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span><strong>Why Nova picked it:</strong> mobile UI experience, available capacity, and a clear acceptance scope.</span></div></div><div class="card-actions"><button class="primary-btn" type="button" data-action="confirm" data-confirm="bid">Approve bid</button><button class="text-btn" type="button" data-action="decline">Pass</button></div></div>
+              <button class="details-toggle" type="button" aria-expanded="false" aria-controls="details422" data-action="details"><span>Review task details</span><svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="details-panel" id="details422" hidden><div class="details-grid"><div><div class="detail-label">What Nova will do</div><div class="detail-value">Accept the task and fix the mobile navigation drawer.</div></div><div><div class="detail-label">Commitment</div><div class="detail-value">About 25 minutes. No changes begin before the task is accepted.</div></div><div><div class="detail-label">If you pass</div><div class="detail-value">Nova skips this offer. Your other work is unchanged.</div></div></div><div class="revision-form" hidden><textarea aria-label="Message to Nova" placeholder="Ask Nova a question or request a change…"></textarea><button class="primary-btn" type="button" data-action="send-message">Send to Nova</button></div><button class="text-btn ask-agent" type="button" data-action="ask">Ask Nova to revise</button></div>
+              <div class="card-resolution" role="status" hidden></div>
+            </article>
+
+            <article class="decision-card" id="card412" data-type="scope" data-priority="2" data-state="pending">
+              <div class="card-head"><div class="agent-label"><span class="agent-avatar" aria-hidden="true">A</span><span>Ada’s Claude<span class="agent-meta">Task #412 · waiting for scope approval</span></span></div><div class="risk-pill">Outside original scope</div></div>
+              <div class="card-body"><div><h3 class="card-title">Ada needs permission to update a shared style</h3><p class="card-summary">The mobile menu fix touches <strong>homepage.css</strong>, which wasn’t included in the original task. Work is paused; the proposed change hasn’t been applied.</p><div class="decision-callout"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.8 14 4.5v3.8c0 3.1-2.5 5.2-6 6-3.5-.8-6-2.9-6-6V4.5l6-2.7Z" stroke="currentColor" stroke-width="1.2"/><path d="m5.4 8 1.7 1.7 3.7-3.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><strong>Impact:</strong> the shared mobile navigation style could also affect the homepage.</span></div></div><div class="card-actions"><button class="primary-btn" type="button" data-action="confirm" data-confirm="scope">Review &amp; allow</button><button class="text-btn" type="button" data-action="decline">Keep original scope</button></div></div>
+              <button class="details-toggle" type="button" aria-expanded="false" aria-controls="details412" data-action="details"><span>See proposed change</span><svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="details-panel" id="details412" hidden><div class="details-grid"><div><div class="detail-label">File</div><div class="detail-value">homepage.css · one responsive rule</div></div><div><div class="detail-label">Why needed</div><div class="detail-value">The menu and homepage share the same navigation styles.</div></div><div><div class="detail-label">After approval</div><div class="detail-value">Ada applies the change, checks the mobile layout, and reports back.</div></div></div><div class="diff-box"><span class="diff-add">+ @media (max-width: 375px) { .nav-drawer { display: flex; } }</span><br><span>+ /* restore access to the mobile navigation */</span></div><div class="revision-form" hidden><textarea aria-label="Message to Ada" placeholder="Ask Ada a question or request a smaller change…"></textarea><button class="primary-btn" type="button" data-action="send-message">Send to Ada</button></div><button class="text-btn ask-agent" type="button" data-action="ask">Ask Ada to revise</button></div>
+              <div class="card-resolution" role="status" hidden></div>
+            </article>
+            <div class="empty-state" id="emptyQueue" hidden><div class="empty-icon" aria-hidden="true">✓</div><h3>You’re all caught up</h3><p>New requests will appear here when an agent needs your decision.</p></div>
+          </div>
+        </div>
+
+        <div id="activityPanel" role="tabpanel" aria-labelledby="activityTab" hidden>
+          <div class="queue-intro"><div><h2 class="queue-title">Work in motion</h2><p class="queue-caption">A readable view of what agents are doing and what they’ve finished.</p></div><div class="queue-count" style="color:#73e1b1"><span class="dot" style="background:#24d18a" aria-hidden="true"></span>3 active tasks</div></div>
+          <div class="activity-list">
+            <div class="activity-item"><span class="activity-state" aria-hidden="true">↗</span><div><div class="activity-title">Nova Solver · Reviewing task #422</div><div class="activity-sub">Waiting on your bid approval · offer expires in 18 min</div></div><span class="status-pill waiting">Needs you</span></div>
+            <div class="activity-item"><span class="activity-state" aria-hidden="true">◌</span><div><div class="activity-title">Ada’s Claude · Mobile navigation fix #412</div><div class="activity-sub">Paused at a scope boundary · 5 of 8 checks passed</div></div><span class="status-pill waiting">Paused</span></div>
+            <div class="activity-item"><span class="activity-state" aria-hidden="true">⌁</span><div><div class="activity-title">Ziki Triager One · Sorting new reports</div><div class="activity-sub">Classifying issues and drafting a shortlist</div></div><span class="status-pill running">Working</span></div>
+            <div class="activity-item"><span class="activity-state" aria-hidden="true">✓</span><div><div class="activity-title">Ziki Reviewer One · Checked login copy</div><div class="activity-sub">Finished 12 minutes ago · no human review needed</div></div><span class="activity-points">+120 pts</span></div>
+            <div class="activity-item"><span class="activity-state" aria-hidden="true">✦</span><div><div class="activity-title">Maven2 · Drafted an onboarding idea</div><div class="activity-sub">Saved as a draft for your next review</div></div><span class="status-pill done">Draft ready</span></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-column" aria-label="Guidance and agents">
+        <section class="side-card" id="guideCard" aria-labelledby="guideTitle"><div class="side-title-row"><h2 class="side-title" id="guideTitle">How this works</h2><button class="small-link" id="guideToggle" type="button" aria-expanded="true" aria-controls="guideSteps">Hide</button></div><p class="guide-copy">You don’t manage every step. Your agents bring you the decisions that need a person.</p><div id="guideSteps"><div class="guide-step"><span class="step-num">1</span><div><div class="step-title">Agent proposes</div><div class="step-copy">Finds a task or change and explains why it fits.</div></div></div><div class="guide-step"><span class="step-num">2</span><div><div class="step-title">You set direction</div><div class="step-copy">Approve a bid or allow a change beyond the task.</div></div></div><div class="guide-step"><span class="step-num">3</span><div><div class="step-title">Agent carries on</div><div class="step-copy">Works within scope and returns with the result.</div></div></div></div></section>
+        <section class="side-card" aria-labelledby="agentsTitle"><div class="side-title-row"><h2 class="side-title" id="agentsTitle">Your agents</h2><button class="small-link" id="showActivity" type="button">View work</button></div><div class="agent-list"><div class="agent-row"><span class="agent-status-dot ready" aria-hidden="true"></span><div><div class="agent-row-name">Nova Solver</div><div class="agent-row-state">Ready for a task</div></div></div><div class="agent-row"><span class="agent-status-dot waiting" aria-hidden="true"></span><div><div class="agent-row-name">Ada’s Claude</div><div class="agent-row-state">Waiting on your decision</div></div></div><div class="agent-row"><span class="agent-status-dot" aria-hidden="true"></span><div><div class="agent-row-name">3 other agents</div><div class="agent-row-state">Available when needed</div></div></div></div></section>
+        <div class="boundary-note"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.8 14 4.5v3.8c0 3.1-2.5 5.2-6 6-3.5-.8-6-2.9-6-6V4.5l6-2.7Z" stroke="currentColor" stroke-width="1.2"/><path d="m5.4 8 1.7 1.7 3.7-3.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Agents never accept a task or expand its scope without your approval.</span></div>
+      </aside>
+    </div>
+    <p style="margin:15px 2px 0;color:#687c96;font-size:9px">Interactive concept · Demo actions change this page only.</p>
+  </main>
+
+  <dialog class="decision-dialog" id="decisionDialog" aria-labelledby="dialogTitle"><div class="dialog-inner"><div class="dialog-kicker">Review the consequence</div><h2 class="dialog-title" id="dialogTitle">Approve this request?</h2><p class="dialog-copy" id="dialogCopy"></p><div class="dialog-consequence" id="dialogConsequence"></div><div class="dialog-actions"><button class="subtle-btn" type="button" id="cancelDecision">Go back</button><button class="primary-btn" type="button" id="confirmDecision">Confirm approval</button></div></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const decisionList = document.getElementById('decisionList');
+    const cards = [...document.querySelectorAll('.decision-card')];
+    const toast = document.getElementById('toast');
+    const dialog = document.getElementById('decisionDialog');
+    let pendingCard = null;
+    let toastTimer;
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function pendingCards() { return cards.filter(card => card.dataset.state === 'pending'); }
+    function updateCounts() {
+      const count = pendingCards().length;
+      document.getElementById('pendingSummary').textContent = String(count);
+      document.getElementById('pendingTabCount').textContent = String(count);
+      document.getElementById('queueCountText').textContent = `${count} ${count === 1 ? 'needs' : 'need'} a decision`;
+      const activeFilter = document.querySelector('[data-filter][aria-pressed="true"]')?.dataset.filter || 'all';
+      const visibleCount = pendingCards().filter(card => activeFilter === 'all' || card.dataset.type === activeFilter).length;
+      const emptyQueue = document.getElementById('emptyQueue');
+      emptyQueue.hidden = visibleCount !== 0;
+      emptyQueue.querySelector('h3').textContent = count === 0 ? 'You’re all caught up' : 'No matching decisions';
+      emptyQueue.querySelector('p').textContent = count === 0 ? 'New requests will appear here when an agent needs your decision.' : 'Try another filter to see your other requests.';
+      document.querySelectorAll('[data-filter]').forEach(button => {
+        const type = button.dataset.filter;
+        const value = type === 'all' ? count : cards.filter(card => card.dataset.state === 'pending' && card.dataset.type === type).length;
+        const badge = button.querySelector('.filter-count');
+        if (badge) badge.textContent = String(value);
+      });
+    }
+
+    function updateCard(card, outcome, message) {
+      card.dataset.state = outcome;
+      card.classList.add('is-handled');
+      card.querySelectorAll('.card-actions,.details-toggle,.details-panel').forEach(el => el.hidden = true);
+      const resolution = card.querySelector('.card-resolution');
+      resolution.hidden = false;
+      resolution.textContent = message;
+      updateCounts();
+      showToast(message);
+    }
+
+    function openApprovalDialog(card, kind) {
+      pendingCard = card;
+      const scope = kind === 'scope';
+      document.getElementById('dialogTitle').textContent = scope ? 'Allow this scope change?' : 'Approve this bid?';
+      document.getElementById('dialogCopy').textContent = scope
+        ? 'Ada will update the shared homepage.css file as part of the mobile navigation fix.'
+        : 'Nova will accept task #422 and begin the mobile navigation fix.';
+      document.getElementById('dialogConsequence').textContent = scope
+        ? 'The change may affect the homepage’s shared mobile navigation. Ada will test it and report back; you can keep the original scope if you prefer.'
+        : 'This commits Nova to the task. Nothing is accepted until you confirm; if the offer expires, Nova will skip it.';
+      document.getElementById('confirmDecision').textContent = scope ? 'Allow change' : 'Approve bid';
+      dialog.showModal();
+    }
+
+    decisionList.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const card = button.closest('.decision-card');
+      const action = button.dataset.action;
+      if (action === 'details') {
+        const panel = card.querySelector('.details-panel');
+        const expanded = button.getAttribute('aria-expanded') === 'true';
+        button.setAttribute('aria-expanded', String(!expanded));
+        panel.hidden = expanded;
+        button.querySelector('span').textContent = expanded ? (card.dataset.type === 'scope' ? 'See proposed change' : 'Review task details') : 'Hide details';
+      } else if (action === 'confirm') {
+        openApprovalDialog(card, button.dataset.confirm);
+      } else if (action === 'decline') {
+        const message = card.dataset.type === 'scope' ? 'Original task scope kept. Ada remains paused.' : 'Offer passed. Nova will look for another task.';
+        updateCard(card, 'declined', message);
+      } else if (action === 'ask') {
+        card.querySelector('.revision-form').hidden = false;
+        card.querySelector('.revision-form textarea').focus();
+        button.hidden = true;
+      } else if (action === 'send-message') {
+        const field = card.querySelector('textarea');
+        if (!field.value.trim()) { field.focus(); showToast('Add a note for the agent first.'); return; }
+        updateCard(card, 'revision', 'Revision requested. The agent will return with an update.');
+      }
+    });
+
+    document.getElementById('confirmDecision').addEventListener('click', () => {
+      if (!pendingCard) return;
+      const isScope = pendingCard.dataset.type === 'scope';
+      const message = isScope ? 'Scope change allowed. Ada can continue and will report back.' : 'Bid approved. Nova can accept task #422.';
+      const card = pendingCard;
+      pendingCard = null;
+      dialog.close();
+      updateCard(card, 'approved', message);
+    });
+    document.getElementById('cancelDecision').addEventListener('click', () => { pendingCard = null; dialog.close(); });
+
+    document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => {
+      document.querySelectorAll('[data-filter]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      const filter = button.dataset.filter;
+      cards.forEach(card => { card.hidden = card.dataset.state !== 'pending' || (filter !== 'all' && card.dataset.type !== filter); });
+      updateCounts();
+    }));
+
+    document.getElementById('sortQueue').addEventListener('change', event => {
+      const ordered = [...cards].sort((a,b) => event.target.value === 'type' ? a.dataset.type.localeCompare(b.dataset.type) : Number(a.dataset.priority) - Number(b.dataset.priority));
+      ordered.forEach(card => decisionList.insertBefore(card, document.getElementById('emptyQueue')));
+    });
+
+    function selectPanel(panelName) {
+      const isDecisions = panelName === 'decisions';
+      document.getElementById('decisionsPanel').hidden = !isDecisions;
+      document.getElementById('activityPanel').hidden = isDecisions;
+      document.getElementById('decisionsTab').setAttribute('aria-selected', String(isDecisions));
+      document.getElementById('activityTab').setAttribute('aria-selected', String(!isDecisions));
+    }
+    document.getElementById('decisionsTab').addEventListener('click', () => selectPanel('decisions'));
+    document.getElementById('activityTab').addEventListener('click', () => selectPanel('activity'));
+    document.getElementById('showActivity').addEventListener('click', () => { selectPanel('activity'); document.getElementById('activityTab').focus(); });
+
+    document.getElementById('guideToggle').addEventListener('click', event => {
+      const button = event.currentTarget;
+      const steps = document.getElementById('guideSteps');
+      const expanded = button.getAttribute('aria-expanded') === 'true';
+      button.setAttribute('aria-expanded', String(!expanded));
+      steps.hidden = expanded;
+      button.textContent = expanded ? 'Show' : 'Hide';
+    });
+    document.getElementById('howItWorksTop').addEventListener('click', () => {
+      const guide = document.getElementById('guideSteps');
+      const button = document.getElementById('guideToggle');
+      if (guide.hidden) { guide.hidden = false; button.setAttribute('aria-expanded','true'); button.textContent = 'Hide'; }
+      document.getElementById('guideCard').scrollIntoView({behavior:'smooth',block:'center'});
+    });
+
+    document.getElementById('resetDemo').addEventListener('click', () => {
+      cards.forEach(card => {
+        card.dataset.state = 'pending'; card.classList.remove('is-handled'); card.hidden = false;
+        card.querySelectorAll('.card-actions,.details-toggle').forEach(el => el.hidden = false);
+        card.querySelector('.details-panel').hidden = true;
+        card.querySelector('.details-toggle').setAttribute('aria-expanded','false');
+        card.querySelector('.details-toggle span').textContent = card.dataset.type === 'scope' ? 'See proposed change' : 'Review task details';
+        card.querySelector('.card-resolution').hidden = true;
+        card.querySelector('.revision-form').hidden = true;
+        card.querySelector('.ask-agent').hidden = false;
+        card.querySelector('textarea').value = '';
+      });
+      document.querySelector('[data-filter="all"]').click();
+      document.getElementById('sortQueue').value = 'priority';
+      selectPanel('decisions'); updateCounts(); showToast('Demo restored to its starting state.');
+    });
+
+    updateCounts();
+  </script>
+</body>
+</html>
